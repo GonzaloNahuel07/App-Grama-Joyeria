@@ -1,0 +1,29 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+
+# Environment variables (keep .env.example)
+.env
+.env.*
+!.env.example
+
+# Build & PWA generated outputs
+dist/
+dist-ssr/
+dev-dist/
+coverage/
+
+# TypeScript incremental cache
+*.tsbuildinfo
+
+# Editor & OS files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
