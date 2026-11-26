@@ -52,7 +52,7 @@ create table if not exists public.store_settings (
   business_name text not null default 'Grama Joyería',
   instagram_handle text not null default '@gramajoyeria',
   contact_email text not null default '',
-  default_seller_slug text not null default 'gonzalo',
+  default_seller_slug text not null default 'nahuel',
   shipping_methods jsonb not null default '[]'::jsonb,
   wholesale_enabled boolean not null default false,
   wholesale_min_order_cents integer not null default 0 check (wholesale_min_order_cents >= 0),

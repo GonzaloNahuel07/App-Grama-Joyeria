@@ -11,11 +11,11 @@ import {
 const SAMPLE_PRODUCTS: Product[] = [
   {
     id: '1',
-    sku: 'AN-925',
-    name: 'Anillo Solitario Plata 925',
-    slug: 'anillo-solitario-plata-925',
-    description: 'Anillo clásico',
-    materialDetails: 'Plata 925 con cubic',
+    sku: 'AN-001',
+    name: 'Anillo Regulable Acero Blanco',
+    slug: 'anillo-regulable-acero-blanco',
+    description: 'Anillo clásico regulable',
+    materialDetails: 'Acero blanco con strass',
     categoryId: 'cat-anillos',
     costCents: 900000,
     retailPriceCents: 1800000,
@@ -33,10 +33,10 @@ const SAMPLE_PRODUCTS: Product[] = [
   {
     id: '2',
     sku: 'CAD-01',
-    name: 'Cadena Veneciana',
-    slug: 'cadena-veneciana',
+    name: 'Cadena Eslabones Acero',
+    slug: 'cadena-eslabones-acero',
     description: 'Cadena 45cm',
-    materialDetails: 'Acero dorado',
+    materialDetails: 'Acero quirúrgico',
     categoryId: 'cat-cadenas',
     costCents: 1000000,
     retailPriceCents: 2000000,
@@ -54,10 +54,10 @@ const SAMPLE_PRODUCTS: Product[] = [
   {
     id: '3',
     sku: 'PUL-02',
-    name: 'Pulsera Esclava',
-    slug: 'pulsera-esclava',
+    name: 'Pulsera Esclava Minimal',
+    slug: 'pulsera-esclava-minimal',
     description: 'Pulsera lisa',
-    materialDetails: 'Plata 925',
+    materialDetails: 'Acero inoxidable pulido',
     categoryId: 'cat-pulseras',
     costCents: 1200000,
     retailPriceCents: 2400000,
@@ -89,14 +89,14 @@ describe('inventoryUtils', () => {
     });
   });
 
-  it('slugifies Spanish jewelry names safely', () => {
-    expect(slugifyText('Aros Baño de Oro 18k · N°2!')).toBe('aros-bano-de-oro-18k-n-2');
+  it('slugifies Spanish accessory names safely', () => {
+    expect(slugifyText('Aros Argolla Diseño Árbol · N°2!')).toBe('aros-argolla-diseno-arbol-n-2');
   });
 
   it('filters inventory by search and stock state and orders replenishment queue', () => {
     expect(
       filterInventoryProducts(SAMPLE_PRODUCTS, {
-        query: 'veneciana',
+        query: 'eslabones',
         categoryId: 'all',
         status: 'needs_restock',
       }).map((p) => p.id),

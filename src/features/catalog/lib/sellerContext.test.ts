@@ -10,8 +10,8 @@ import {
 const PARTNERS: PartnerProfile[] = [
   {
     id: 'p-1',
-    fullName: 'Gonzalo',
-    sellerSlug: 'gonzalo',
+    fullName: 'Nahuel',
+    sellerSlug: 'nahuel',
     whatsappNumber: '+54 9 11 5555-1111',
     role: 'owner',
     isActive: true,
@@ -29,7 +29,7 @@ const PARTNERS: PartnerProfile[] = [
 describe('sellerContext', () => {
   it('parses valid seller slugs from ?v= and ?vendedor= query parameters', () => {
     expect(parseSellerSlugFromSearch('?v=Hermana')).toBe('hermana');
-    expect(parseSellerSlugFromSearch('?vendedor=gonzalo')).toBe('gonzalo');
+    expect(parseSellerSlugFromSearch('?vendedor=nahuel')).toBe('nahuel');
     expect(parseSellerSlugFromSearch('?v=invalid slug!')).toBeNull();
     expect(parseSellerSlugFromSearch('')).toBeNull();
   });
@@ -37,9 +37,9 @@ describe('sellerContext', () => {
   it('prioritizes query string over stored slug and default slug', () => {
     const resolved = resolveActiveSeller({
       search: '?v=hermana',
-      storedSlug: 'gonzalo',
+      storedSlug: 'nahuel',
       sellers: PARTNERS,
-      defaultSlug: 'gonzalo',
+      defaultSlug: 'nahuel',
     });
     expect(resolved?.sellerSlug).toBe('hermana');
   });
@@ -50,7 +50,7 @@ describe('sellerContext', () => {
         search: '',
         storedSlug: 'hermana',
         sellers: PARTNERS,
-        defaultSlug: 'gonzalo',
+        defaultSlug: 'nahuel',
       })?.sellerSlug,
     ).toBe('hermana');
 
@@ -59,9 +59,9 @@ describe('sellerContext', () => {
         search: '',
         storedSlug: 'inexistente',
         sellers: PARTNERS,
-        defaultSlug: 'gonzalo',
+        defaultSlug: 'nahuel',
       })?.sellerSlug,
-    ).toBe('gonzalo');
+    ).toBe('nahuel');
   });
 
   it('builds shareable catalog links and sanitized WhatsApp URLs', () => {

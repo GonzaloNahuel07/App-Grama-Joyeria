@@ -174,7 +174,7 @@ export function AdminSettingsPage() {
       instagramHandle: settings.instagramHandle,
       contactEmail: settings.contactEmail,
       defaultSellerSlug:
-        normalizeSellerSlug(settings.defaultSellerSlug) ?? partners[0]?.sellerSlug ?? 'gonzalo',
+        normalizeSellerSlug(settings.defaultSellerSlug) ?? partners[0]?.sellerSlug ?? 'nahuel',
     });
 
     if (!parsed.success) {

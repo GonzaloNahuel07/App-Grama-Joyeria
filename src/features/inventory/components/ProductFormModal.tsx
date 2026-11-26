@@ -295,7 +295,7 @@ export function ProductFormModal({
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ej. Anillo Solitario Plata 925"
+                placeholder="Ej. Anillo Regulable Acero Blanco"
                 className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
               />
             </div>
@@ -457,7 +457,7 @@ export function ProductFormModal({
               type="text"
               value={materialDetails}
               onChange={(e) => setMaterialDetails(e.target.value)}
-              placeholder="Ej. Plata 925 · Largo 45cm · Evitar contacto con perfume"
+              placeholder="Ej. Acero quirúrgico · Largo 45cm · Evitar contacto con perfume"
               className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
             />
           </div>

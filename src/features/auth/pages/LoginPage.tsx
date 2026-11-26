@@ -102,7 +102,7 @@ export function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="gonzalo@grama.app"
+                  placeholder="nahuel@grama.app"
                   className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-brand"
                 />
               </div>

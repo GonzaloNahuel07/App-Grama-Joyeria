@@ -76,7 +76,7 @@ export function resolveActiveSeller(options: {
  */
 export function buildShareableCatalogUrl(origin: string, sellerSlug: string): string {
   const cleanOrigin = origin.replace(/\/+$/, '');
-  const validSlug = normalizeSellerSlug(sellerSlug) ?? 'gonzalo';
+  const validSlug = normalizeSellerSlug(sellerSlug) ?? 'nahuel';
   return `${cleanOrigin}/?v=${encodeURIComponent(validSlug)}`;
 }
 

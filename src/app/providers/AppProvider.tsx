@@ -18,7 +18,7 @@ const EMPTY_META: PublicCatalogMeta = {
     businessName: 'Grama Joyería',
     instagramHandle: '@gramajoyeria',
     contactEmail: '',
-    defaultSellerSlug: 'gonzalo',
+    defaultSellerSlug: 'nahuel',
     shippingMethods: [],
     wholesaleEnabled: false,
     wholesaleMinOrderCents: 0,
