@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Check,
   Cloud,
   Copy,
@@ -8,21 +9,48 @@ import {
   Receipt,
   Settings,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../../../app/providers/useApp';
+import { storeService } from '../../../services';
+import { formatMoney } from '../../../shared/lib/money';
+import type { ActivityLog, Product } from '../../../shared/types/domain';
 import { buildShareableCatalogUrl } from '../../catalog/lib/sellerContext';
+import { getReplenishmentQueue } from '../../inventory/lib/inventoryUtils';
 
 /**
- * Admin dashboard home (Block 1 overview with partner link sharing and roadmap checkpoints).
+ * Admin dashboard home displaying inventory KPIs, replenishment alerts, and recent partner activity.
  */
 export function AdminDashboardPage() {
   const { session, mode, publicMeta } = useApp();
   const [copied, setCopied] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [activity, setActivity] = useState<ActivityLog[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([storeService.getAdminProducts(), storeService.getRecentActivity(6)])
+      .then(([loadedProducts, loadedActivity]) => {
+        if (!active) return;
+        setProducts(loadedProducts);
+        setActivity(loadedActivity);
+      })
+      .catch(() => {
+        // Keep safe empty summary if initial load fails.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!session) return null;
 
   const myShareUrl = buildShareableCatalogUrl(window.location.origin, session.partner.sellerSlug);
+  const replenishmentQueue = getReplenishmentQueue(products);
+  const activeCount = products.filter((p) => p.isActive).length;
+  const totalUnits = products.reduce((sum, p) => sum + p.stockQty, 0);
+  const investedCostCents = products.reduce((sum, p) => sum + p.costCents * p.stockQty, 0);
 
   async function handleCopy() {
     try {
@@ -61,6 +89,68 @@ export function AdminDashboardPage() {
           {mode === 'supabase' ? 'Base de datos Supabase conectada' : 'Modo Local (sin Supabase)'}
         </div>
       </div>
+
+      {/* Low-stock replenishment alert */}
+      {replenishmentQueue.length > 0 ? (
+        <section className="rounded-2xl border border-warn/30 bg-warn-soft/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-warn mt-0.5" aria-hidden="true" />
+            <div className="space-y-0.5">
+              <h2 className="text-sm font-bold text-ink">
+                {replenishmentQueue.length}{' '}
+                {replenishmentQueue.length === 1
+                  ? 'accesorio necesita reposición'
+                  : 'accesorios necesitan reposición'}
+              </h2>
+              <p className="text-xs text-muted">
+                {replenishmentQueue
+                  .slice(0, 3)
+                  .map((p) => `${p.name} (${p.stockQty} u.)`)
+                  .join(' · ')}
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/admin/stock?tab=restock"
+            className="inline-flex items-center justify-center self-start sm:self-center rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-brand-ink hover:opacity-90"
+          >
+            Ver bandeja de reposición →
+          </Link>
+        </section>
+      ) : null}
+
+      {/* Inventory KPIs */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-2xl border border-line bg-card p-4">
+          <div className="text-xs text-muted">Joyas activas</div>
+          <div className="text-lg font-bold mt-1">{activeCount}</div>
+          <div className="text-xs text-muted mt-0.5">{products.length} cargadas en total</div>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4">
+          <div className="text-xs text-muted">Unidades en stock</div>
+          <div className="text-lg font-bold mt-1">{totalUnits}</div>
+          <div className="text-xs text-muted mt-0.5">Disponibles para vender</div>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4">
+          <div className="text-xs text-muted">Capital en mercadería</div>
+          <div className="text-lg font-bold mt-1">{formatMoney(investedCostCents)}</div>
+          <div className="text-xs text-muted mt-0.5">Valuado al costo actual</div>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4">
+          <div className="text-xs text-muted">Alertas de mínimo</div>
+          <div
+            className={`text-lg font-bold mt-1 ${
+              replenishmentQueue.length > 0 ? 'text-danger' : 'text-ok'
+            }`}
+          >
+            {replenishmentQueue.length}
+          </div>
+          <div className="text-xs text-muted mt-0.5">
+            {replenishmentQueue.length > 0 ? 'Requieren reposición' : 'Stock cubierto'}
+          </div>
+        </div>
+      </section>
 
       {/* Shareable personal catalog link */}
       <section className="rounded-2xl border border-line bg-card p-5 space-y-3">
@@ -106,56 +196,82 @@ export function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* Block 1 status and upcoming blocks */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Link
-          to="/admin/config"
-          className="rounded-2xl border border-line bg-card p-4 space-y-2 transition hover:border-brand"
-        >
-          <div className="flex items-center justify-between">
-            <span className="rounded-full bg-ok-soft px-2.5 py-0.5 text-xs font-semibold text-ok">
-              Activo · Bloque 1
-            </span>
-            <Settings className="h-4 w-4 text-muted" aria-hidden="true" />
+      {/* Partner activity feed + module shortcuts */}
+      <div className="grid gap-4 lg:grid-cols-5">
+        <section className="lg:col-span-3 rounded-2xl border border-line bg-card p-5 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold">Actividad reciente entre socios</h2>
+            <Link to="/admin/stock" className="text-xs font-semibold underline text-muted">
+              Ir a stock
+            </Link>
           </div>
-          <h3 className="text-sm font-bold">Socios, WhatsApp y Envíos</h3>
-          <p className="text-xs text-muted">
-            Configurá los números personales de ambos, datos del negocio y modalidades de entrega.
-          </p>
-        </Link>
 
-        <Link
-          to="/admin/stock"
-          className="rounded-2xl border border-line bg-card p-4 space-y-2 transition hover:border-brand"
-        >
-          <div className="flex items-center justify-between">
-            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
-              Próximo · Bloque 2
-            </span>
-            <Package className="h-4 w-4 text-muted" aria-hidden="true" />
-          </div>
-          <h3 className="text-sm font-bold">Inventario y Reposición</h3>
-          <p className="text-xs text-muted">
-            Alta de joyas con fotos, costos, precios y alertas automáticas por stock mínimo.
-          </p>
-        </Link>
+          {activity.length === 0 ? (
+            <p className="text-xs text-muted">Todavía no hay movimientos registrados.</p>
+          ) : (
+            <ul className="divide-y divide-line text-xs">
+              {activity.map((entry) => (
+                <li key={entry.id} className="py-2.5 flex items-start justify-between gap-3">
+                  <div>
+                    <strong className="text-ink">{entry.actorName}</strong>{' '}
+                    <span className="text-muted">· {entry.summary}</span>
+                  </div>
+                  <span className="shrink-0 text-muted">
+                    {new Date(entry.createdAt).toLocaleDateString('es-AR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        <Link
-          to="/admin/pedidos"
-          className="rounded-2xl border border-line bg-card p-4 space-y-2 transition hover:border-brand"
-        >
-          <div className="flex items-center justify-between">
-            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
-              Bloques 4 y 5
-            </span>
-            <Receipt className="h-4 w-4 text-muted" aria-hidden="true" />
-          </div>
-          <h3 className="text-sm font-bold">Ventas, Gastos y Gráficos</h3>
-          <p className="text-xs text-muted">
-            Confirmación de pedidos, registro de reinversiones, historial entre socios y dashboards.
-          </p>
-        </Link>
-      </section>
+        <section className="lg:col-span-2 grid gap-3">
+          <Link
+            to="/admin/stock"
+            className="rounded-2xl border border-line bg-card p-4 space-y-1.5 transition hover:border-brand"
+          >
+            <div className="flex items-center justify-between">
+              <span className="rounded-full bg-ok-soft px-2.5 py-0.5 text-xs font-semibold text-ok">
+                Activo · Bloque 2
+              </span>
+              <Package className="h-4 w-4 text-muted" aria-hidden="true" />
+            </div>
+            <h3 className="text-sm font-bold">Inventario y Reposición</h3>
+            <p className="text-xs text-muted">Cargá joyas, subí fotos y controlá faltantes.</p>
+          </Link>
+
+          <Link
+            to="/admin/config"
+            className="rounded-2xl border border-line bg-card p-4 space-y-1.5 transition hover:border-brand"
+          >
+            <div className="flex items-center justify-between">
+              <span className="rounded-full bg-ok-soft px-2.5 py-0.5 text-xs font-semibold text-ok">
+                Activo · Bloque 1
+              </span>
+              <Settings className="h-4 w-4 text-muted" aria-hidden="true" />
+            </div>
+            <h3 className="text-sm font-bold">Socios, WhatsApp y Envíos</h3>
+            <p className="text-xs text-muted">Editá los links y datos de entrega.</p>
+          </Link>
+
+          <Link
+            to="/admin/pedidos"
+            className="rounded-2xl border border-line bg-card p-4 space-y-1.5 transition hover:border-brand"
+          >
+            <div className="flex items-center justify-between">
+              <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
+                Próximo · Bloque 4 y 5
+              </span>
+              <Receipt className="h-4 w-4 text-muted" aria-hidden="true" />
+            </div>
+            <h3 className="text-sm font-bold">Pedidos, Gastos y Gráficos</h3>
+            <p className="text-xs text-muted">Confirmar ventas, registrar gastos y balances.</p>
+          </Link>
+        </section>
+      </div>
     </div>
   );
 }

@@ -34,13 +34,13 @@ const ADMIN_NAV = [
 ] as const;
 
 function sidebarLinkClass({ isActive }: { isActive: boolean }): string {
-  return `flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+  return `flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
     isActive ? 'bg-brand text-brand-ink' : 'text-ink hover:bg-surface'
   }`;
 }
 
 function mobileTabClass({ isActive }: { isActive: boolean }): string {
-  return `flex flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium transition ${
+  return `relative flex flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium transition ${
     isActive ? 'text-ink font-semibold' : 'text-muted'
   }`;
 }
@@ -50,7 +50,7 @@ function mobileTabClass({ isActive }: { isActive: boolean }): string {
  */
 export function AdminLayout() {
   const location = useLocation();
-  const { isAuthReady, session, mode, signOut, publicMeta } = useApp();
+  const { isAuthReady, session, mode, signOut, publicMeta, replenishmentAlertCount } = useApp();
   const [copied, setCopied] = useState(false);
 
   if (!isAuthReady) {
@@ -95,10 +95,18 @@ export function AdminLayout() {
           <nav className="space-y-1" aria-label="Menú de administración">
             {ADMIN_NAV.map((item) => {
               const Icon = item.icon;
+              const showBadge = item.to === '/admin/stock' && replenishmentAlertCount > 0;
               return (
                 <NavLink key={item.to} to={item.to} end={item.end} className={sidebarLinkClass}>
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {item.label}
+                  <span className="flex items-center gap-2.5">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    {item.label}
+                  </span>
+                  {showBadge ? (
+                    <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-brand-ink">
+                      {replenishmentAlertCount}
+                    </span>
+                  ) : null}
                 </NavLink>
               );
             })}
@@ -206,10 +214,16 @@ export function AdminLayout() {
         >
           {ADMIN_NAV.map((item) => {
             const Icon = item.icon;
+            const showBadge = item.to === '/admin/stock' && replenishmentAlertCount > 0;
             return (
               <NavLink key={item.to} to={item.to} end={item.end} className={mobileTabClass}>
                 <Icon className="h-5 w-5" aria-hidden="true" />
                 <span>{item.shortLabel}</span>
+                {showBadge ? (
+                  <span className="absolute top-1 right-4 rounded-full bg-danger px-1.5 py-0.5 text-xs font-bold leading-none text-brand-ink">
+                    {replenishmentAlertCount}
+                  </span>
+                ) : null}
               </NavLink>
             );
           })}
