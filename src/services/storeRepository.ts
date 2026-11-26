@@ -2,9 +2,11 @@ import type {
   ActivityLog,
   AuthSession,
   Category,
+  CreatedCatalogOrder,
   PartnerProfile,
   Product,
   ProductImage,
+  PublicCatalogProduct,
   StoreSettings,
 } from '../shared/types/domain';
 
@@ -35,6 +37,22 @@ export interface PublicCatalogMeta {
   settings: StoreSettings;
 }
 
+export interface PublicCatalogData {
+  categories: Category[];
+  products: PublicCatalogProduct[];
+}
+
+export interface CatalogOrderSubmitInput {
+  sellerSlug: string;
+  customerName: string;
+  customerPhone: string;
+  deliveryMethod: string;
+  deliveryAddress: string;
+  paymentMethod: string;
+  notes: string;
+  items: Array<{ productId: string; qty: number }>;
+}
+
 export interface StoreRepository {
   readonly mode: 'supabase' | 'local';
   getPublicCatalogMeta(): Promise<PublicCatalogMeta>;
@@ -57,4 +75,8 @@ export interface StoreRepository {
   uploadProductImage(productId: string, file: File): Promise<ProductImage>;
   deleteProductImage(image: ProductImage): Promise<void>;
   getRecentActivity(limit?: number): Promise<ActivityLog[]>;
+
+  // Block 3 — Public Storefront & WhatsApp Order Creation
+  getPublicCatalog(): Promise<PublicCatalogData>;
+  submitCatalogOrder(input: CatalogOrderSubmitInput): Promise<CreatedCatalogOrder>;
 }

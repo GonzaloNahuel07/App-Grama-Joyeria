@@ -4,32 +4,39 @@ import type {
   ActivityLog,
   AuthSession,
   Category,
+  CreatedCatalogOrder,
+  Order,
+  OrderItem,
   PartnerProfile,
   Product,
   ProductImage,
+  PublicCatalogProduct,
   StoreSettings,
 } from '../shared/types/domain';
 import type {
+  CatalogOrderSubmitInput,
   PartnerUpdateInput,
   ProductSaveInput,
+  PublicCatalogData,
   PublicCatalogMeta,
   StoreRepository,
 } from './storeRepository';
 
 const STORAGE_KEYS = {
-  partners: 'grama.local.partners.v1',
-  settings: 'grama.local.settings.v1',
-  sessionSlug: 'grama.local.sessionSlug.v1',
-  categories: 'grama.local.categories.v1',
-  products: 'grama.local.products.v1',
-  activity: 'grama.local.activity.v1',
+  partners: 'grama.local.partners.v2',
+  settings: 'grama.local.settings.v2',
+  sessionSlug: 'grama.local.sessionSlug.v2',
+  categories: 'grama.local.categories.v2',
+  products: 'grama.local.products.v2',
+  orders: 'grama.local.orders.v2',
+  activity: 'grama.local.activity.v2',
 } as const;
 
 const DEFAULT_PARTNERS: PartnerProfile[] = [
   {
-    id: 'local-gonzalo',
-    fullName: 'Gonzalo',
-    sellerSlug: 'gonzalo',
+    id: 'local-nahuel',
+    fullName: 'Nahuel',
+    sellerSlug: 'nahuel',
     whatsappNumber: '5491100001111',
     role: 'owner',
     isActive: true,
@@ -48,7 +55,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
   businessName: 'Grama Joyería',
   instagramHandle: '@gramajoyeria',
   contactEmail: '',
-  defaultSellerSlug: 'gonzalo',
+  defaultSellerSlug: 'nahuel',
   shippingMethods: [
     {
       id: 'pickup',
@@ -82,12 +89,12 @@ const SEED_TIMESTAMP = '2026-11-26T15:00:00.000Z';
 
 const DEFAULT_PRODUCTS: Product[] = [
   {
-    id: 'prod-anillo-solitario',
+    id: 'prod-anillo-regulable',
     sku: 'AN-001',
-    name: 'Anillo Solitario Plata 925',
-    slug: 'anillo-solitario-plata-925',
-    description: 'Diseño clásico con piedra engarzada, ideal para uso diario o regalo.',
-    materialDetails: 'Plata 925 · Cubic central 4mm · Talles surtidos',
+    name: 'Anillo Regulable Acero Blanco',
+    slug: 'anillo-regulable-acero-blanco',
+    description: 'Diseño moderno regulable y liviano, ideal para uso diario o regalo.',
+    materialDetails: 'Acero blanco · Talle regulable · Aplique cristal strass',
     categoryId: 'cat-anillos',
     costCents: 920000,
     retailPriceCents: 1850000,
@@ -97,18 +104,18 @@ const DEFAULT_PRODUCTS: Product[] = [
     minStockQty: 3,
     isActive: true,
     images: [],
-    createdBy: 'local-gonzalo',
-    updatedBy: 'local-gonzalo',
+    createdBy: 'local-nahuel',
+    updatedBy: 'local-nahuel',
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
   },
   {
-    id: 'prod-cadena-veneciana',
+    id: 'prod-cadena-eslabones',
     sku: 'CAD-014',
-    name: 'Cadena Veneciana 45cm',
-    slug: 'cadena-veneciana-45cm',
-    description: 'Cadena fina con brillo duradero resistente al agua.',
-    materialDetails: 'Acero quirúrgico dorado · Largo 45cm · Cierre mosquetón',
+    name: 'Cadena Eslabones Acero',
+    slug: 'cadena-eslabones-acero',
+    description: 'Cadena versátil de eslabones finos resistente al agua.',
+    materialDetails: 'Acero quirúrgico · Largo 45cm · Cierre mosquetón',
     categoryId: 'cat-cadenas',
     costCents: 1180000,
     retailPriceCents: 2450000,
@@ -126,10 +133,10 @@ const DEFAULT_PRODUCTS: Product[] = [
   {
     id: 'prod-aros-argolla',
     sku: 'AR-008',
-    name: 'Aros Argolla Baño Oro',
-    slug: 'aros-argolla-bano-oro',
+    name: 'Aros Argolla Acero Lisos',
+    slug: 'aros-argolla-acero-lisos',
     description: 'Argollas livianas de 18mm con cierre clic seguro.',
-    materialDetails: 'Bronce con baño de oro 18k · Hipoalergénicos',
+    materialDetails: 'Acero quirúrgico hipoalergénico · Diámetro 18mm',
     categoryId: 'cat-aros',
     costCents: 590000,
     retailPriceCents: 1290000,
@@ -139,18 +146,18 @@ const DEFAULT_PRODUCTS: Product[] = [
     minStockQty: 3,
     isActive: true,
     images: [],
-    createdBy: 'local-gonzalo',
-    updatedBy: 'local-gonzalo',
+    createdBy: 'local-nahuel',
+    updatedBy: 'local-nahuel',
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'prod-pulsera-esclava',
     sku: 'PUL-003',
-    name: 'Pulsera Esclava Lisa',
-    slug: 'pulsera-esclava-lisa',
+    name: 'Pulsera Esclava Minimal',
+    slug: 'pulsera-esclava-minimal',
     description: 'Pulsera rígida minimalista fácil de combinar.',
-    materialDetails: 'Plata 925 maciza · Diámetro 60mm',
+    materialDetails: 'Acero inoxidable pulido · Diámetro 60mm',
     categoryId: 'cat-pulseras',
     costCents: 1550000,
     retailPriceCents: 2980000,
@@ -173,19 +180,19 @@ const DEFAULT_ACTIVITY: ActivityLog[] = [
     actorId: 'local-hermana',
     actorName: 'Hermana',
     actionType: 'product_created',
-    summary: 'Cargó Cadena Veneciana 45cm (stock inicial: 2)',
+    summary: 'Cargó Cadena Eslabones Acero (stock inicial: 2)',
     entityType: 'product',
-    entityId: 'prod-cadena-veneciana',
+    entityId: 'prod-cadena-eslabones',
     createdAt: SEED_TIMESTAMP,
   },
   {
     id: 'act-seed-2',
-    actorId: 'local-gonzalo',
-    actorName: 'Gonzalo',
+    actorId: 'local-nahuel',
+    actorName: 'Nahuel',
     actionType: 'product_created',
-    summary: 'Cargó Anillo Solitario Plata 925 (stock inicial: 6)',
+    summary: 'Cargó Anillo Regulable Acero Blanco (stock inicial: 6)',
     entityType: 'product',
-    entityId: 'prod-anillo-solitario',
+    entityId: 'prod-anillo-regulable',
     createdAt: SEED_TIMESTAMP,
   },
 ];
@@ -219,6 +226,10 @@ function loadCategories(): Category[] {
 
 function loadProducts(): Product[] {
   return readJson<Product[]>(STORAGE_KEYS.products, DEFAULT_PRODUCTS);
+}
+
+function loadOrders(): Order[] {
+  return readJson<Order[]>(STORAGE_KEYS.orders, []);
 }
 
 function loadActivity(): ActivityLog[] {
@@ -525,5 +536,117 @@ export const localRepository: StoreRepository = {
 
   async getRecentActivity(limit = 12): Promise<ActivityLog[]> {
     return loadActivity().slice(0, limit);
+  },
+
+  async getPublicCatalog(): Promise<PublicCatalogData> {
+    const categories = loadCategories()
+      .filter((c) => c.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    const products: PublicCatalogProduct[] = loadProducts()
+      .filter((p) => p.isActive)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        description: p.description,
+        materialDetails: p.materialDetails,
+        categoryId: p.categoryId,
+        retailPriceCents: p.retailPriceCents,
+        stockQty: p.stockQty,
+        minStockQty: p.minStockQty,
+        images: p.images,
+      }));
+
+    return { categories, products };
+  },
+
+  async submitCatalogOrder(input: CatalogOrderSubmitInput): Promise<CreatedCatalogOrder> {
+    if (input.items.length === 0) {
+      throw new Error('Tu pedido está vacío.');
+    }
+
+    const partners = loadPartners().filter((p) => p.isActive);
+    const settings = loadSettings();
+    const seller =
+      partners.find((p) => p.sellerSlug === input.sellerSlug) ??
+      partners.find((p) => p.sellerSlug === settings.defaultSellerSlug) ??
+      partners[0];
+
+    if (!seller) {
+      throw new Error('No hay vendedores configurados para recibir el pedido.');
+    }
+
+    const products = loadProducts();
+    const orderItems: OrderItem[] = [];
+    let totalCents = 0;
+
+    for (const reqItem of input.items) {
+      const product = products.find((p) => p.id === reqItem.productId && p.isActive);
+      if (!product) {
+        throw new Error('Uno de los accesorios seleccionados ya no está disponible.');
+      }
+      if (product.stockQty < reqItem.qty) {
+        throw new Error(
+          `Stock insuficiente para "${product.name}". Disponible: ${product.stockQty}.`,
+        );
+      }
+      orderItems.push({
+        id: `oi-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        productId: product.id,
+        productNameSnapshot: product.name,
+        qty: reqItem.qty,
+        unitPriceCents: product.retailPriceCents,
+        unitCostCents: product.costCents,
+      });
+      totalCents += product.retailPriceCents * reqItem.qty;
+    }
+
+    const orderId = `ord-${Date.now()}`;
+    const orderCode = `PED-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const now = new Date().toISOString();
+
+    const newOrder: Order = {
+      id: orderId,
+      orderCode,
+      source: 'catalog',
+      sellerSlug: seller.sellerSlug,
+      assignedProfileId: seller.id,
+      customerName: input.customerName.trim(),
+      customerPhone: input.customerPhone.trim(),
+      deliveryMethod: input.deliveryMethod.trim(),
+      deliveryAddress: input.deliveryAddress.trim(),
+      paymentMethod: input.paymentMethod.trim(),
+      notes: input.notes.trim(),
+      status: 'pending',
+      totalCents,
+      items: orderItems,
+      createdBy: null,
+      confirmedBy: null,
+      confirmedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const existingOrders = loadOrders();
+    writeJson(STORAGE_KEYS.orders, [newOrder, ...existingOrders]);
+
+    recordLocalActivity({
+      actorId: seller.id,
+      actorName: seller.fullName,
+      actionType: 'catalog_order_created',
+      summary: `Nuevo pedido ${orderCode} de ${newOrder.customerName} (${seller.fullName})`,
+      entityType: 'order',
+      entityId: orderId,
+    });
+
+    return {
+      orderId,
+      orderCode,
+      totalCents,
+      sellerSlug: seller.sellerSlug,
+      sellerName: seller.fullName,
+      whatsappNumber: seller.whatsappNumber,
+    };
   },
 };

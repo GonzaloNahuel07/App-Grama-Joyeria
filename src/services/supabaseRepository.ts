@@ -4,17 +4,21 @@ import type {
   ActivityLog,
   AuthSession,
   Category,
+  CreatedCatalogOrder,
   PartnerProfile,
   PartnerRole,
   Product,
   ProductImage,
+  PublicCatalogProduct,
   ShippingMethodInfo,
   StoreSettings,
 } from '../shared/types/domain';
 import { supabase } from './supabaseClient';
 import type {
+  CatalogOrderSubmitInput,
   PartnerUpdateInput,
   ProductSaveInput,
+  PublicCatalogData,
   PublicCatalogMeta,
   StoreRepository,
 } from './storeRepository';
@@ -82,6 +86,18 @@ interface ProductRow {
   product_images?: ProductImageRow[];
 }
 
+interface PublicProductRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  material_details: string;
+  category_id: string | null;
+  retail_price_cents: number;
+  stock_qty: number;
+  min_stock_qty: number;
+}
+
 interface ActivityLogRow {
   id: string;
   actor_id: string | null;
@@ -91,6 +107,15 @@ interface ActivityLogRow {
   entity_type: string;
   entity_id: string | null;
   created_at: string;
+}
+
+interface CreateOrderRpcResult {
+  order_id: string;
+  order_code: string;
+  total_cents: number;
+  seller_slug: string;
+  seller_name: string;
+  whatsapp_number: string;
 }
 
 const PRODUCT_IMAGES_BUCKET = 'product-images';
@@ -556,5 +581,82 @@ export const supabaseRepository: StoreRepository = {
       .limit(limit);
     if (error) throw error;
     return ((data ?? []) as ActivityLogRow[]).map(mapActivityRow);
+  },
+
+  async getPublicCatalog(): Promise<PublicCatalogData> {
+    const client = getClient();
+    const [
+      { data: categoryRows, error: catError },
+      { data: productRows, error: prodError },
+      { data: imageRows, error: imgError },
+    ] = await Promise.all([
+      client
+        .from('categories')
+        .select('id, name, slug, sort_order, is_active')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
+      client.from('public_catalog_products').select('*').order('created_at', { ascending: false }),
+      client
+        .from('product_images')
+        .select('id, product_id, storage_path, public_url, sort_order')
+        .order('sort_order', { ascending: true }),
+    ]);
+
+    if (catError) throw catError;
+    if (prodError) throw prodError;
+    if (imgError) throw imgError;
+
+    const imagesByProduct = new Map<string, ProductImage[]>();
+    for (const row of (imageRows ?? []) as ProductImageRow[]) {
+      const list = imagesByProduct.get(row.product_id) ?? [];
+      list.push(mapImageRow(row));
+      imagesByProduct.set(row.product_id, list);
+    }
+
+    const products: PublicCatalogProduct[] = ((productRows ?? []) as PublicProductRow[]).map(
+      (row) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        description: row.description,
+        materialDetails: row.material_details,
+        categoryId: row.category_id,
+        retailPriceCents: row.retail_price_cents,
+        stockQty: row.stock_qty,
+        minStockQty: row.min_stock_qty,
+        images: imagesByProduct.get(row.id) ?? [],
+      }),
+    );
+
+    return {
+      categories: ((categoryRows ?? []) as CategoryRow[]).map(mapCategoryRow),
+      products,
+    };
+  },
+
+  async submitCatalogOrder(input: CatalogOrderSubmitInput): Promise<CreatedCatalogOrder> {
+    const client = getClient();
+    const { data, error } = await client.rpc('create_catalog_order', {
+      p_seller_slug: input.sellerSlug,
+      p_customer_name: input.customerName,
+      p_customer_phone: input.customerPhone,
+      p_delivery_method: input.deliveryMethod,
+      p_delivery_address: input.deliveryAddress,
+      p_payment_method: input.paymentMethod,
+      p_notes: input.notes,
+      p_items: input.items.map((item) => ({ product_id: item.productId, qty: item.qty })),
+    });
+
+    if (error) throw error;
+    const rpcResult = data as CreateOrderRpcResult;
+
+    return {
+      orderId: rpcResult.order_id,
+      orderCode: rpcResult.order_code,
+      totalCents: rpcResult.total_cents,
+      sellerSlug: rpcResult.seller_slug,
+      sellerName: rpcResult.seller_name,
+      whatsappNumber: rpcResult.whatsapp_number,
+    };
   },
 };
