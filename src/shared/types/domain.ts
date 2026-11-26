@@ -77,6 +77,68 @@ export interface Product {
   updatedAt: string;
 }
 
+export interface PublicCatalogProduct {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  materialDetails: string;
+  categoryId: string | null;
+  retailPriceCents: number;
+  stockQty: number;
+  minStockQty: number;
+  images: ProductImage[];
+}
+
+export interface CartItem {
+  productId: string;
+  name: string;
+  retailPriceCents: number;
+  maxStockQty: number;
+  imageUrl: string | null;
+  qty: number;
+}
+
+export interface OrderItem {
+  id: string;
+  productId: string | null;
+  productNameSnapshot: string;
+  qty: number;
+  unitPriceCents: number;
+  unitCostCents: number;
+}
+
+export interface Order {
+  id: string;
+  orderCode: string;
+  source: OrderSource;
+  sellerSlug: string;
+  assignedProfileId: string | null;
+  customerName: string;
+  customerPhone: string;
+  deliveryMethod: string;
+  deliveryAddress: string;
+  paymentMethod: string;
+  notes: string;
+  status: OrderStatus;
+  totalCents: number;
+  items: OrderItem[];
+  createdBy: string | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatedCatalogOrder {
+  orderId: string;
+  orderCode: string;
+  totalCents: number;
+  sellerSlug: string;
+  sellerName: string;
+  whatsappNumber: string;
+}
+
 export interface ActivityLog {
   id: string;
   actorId: string | null;
