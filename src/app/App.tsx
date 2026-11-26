@@ -1,23 +1,40 @@
-import { env } from '../shared/lib/env';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage';
+import { AdminOrdersPlaceholderPage } from '../features/admin/pages/AdminOrdersPlaceholderPage';
+import { AdminSettingsPage } from '../features/admin/pages/AdminSettingsPage';
+import { AdminStockPlaceholderPage } from '../features/admin/pages/AdminStockPlaceholderPage';
+import { LoginPage } from '../features/auth/pages/LoginPage';
+import { CatalogHomePage } from '../features/catalog/pages/CatalogHomePage';
+import { CheckoutPlaceholderPage } from '../features/catalog/pages/CheckoutPlaceholderPage';
+import { ShippingContactPage } from '../features/catalog/pages/ShippingContactPage';
+import { AdminLayout } from './layouts/AdminLayout';
+import { PublicLayout } from './layouts/PublicLayout';
+import { AppProvider } from './providers/AppProvider';
 
 /**
- * Root application shell. Domain modules will be mounted here once defined.
+ * Root application router separating the public catalog storefront from the partner admin area.
  */
 export function App() {
   return (
-    <main className="app-shell">
-      <section className="status-card" aria-labelledby="app-title">
-        <span className="status-badge">Base técnica lista</span>
-        <h1 id="app-title">{env.VITE_APP_NAME}</h1>
-        <p>
-          Proyecto inicializado con TypeScript estricto, reglas de código, tests unitarios y soporte
-          PWA para PC y celular.
-        </p>
-        <ul className="status-list">
-          <li>Arquitectura modular preparada en src/features, src/services y src/shared.</li>
-          <li>Listo para definir las funcionalidades del negocio y conectar la base de datos.</li>
-        </ul>
-      </section>
-    </main>
+    <AppProvider>
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route index element={<CatalogHomePage />} />
+          <Route path="envios" element={<ShippingContactPage />} />
+          <Route path="pedido" element={<CheckoutPlaceholderPage />} />
+        </Route>
+
+        <Route path="login" element={<LoginPage />} />
+
+        <Route path="admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="stock" element={<AdminStockPlaceholderPage />} />
+          <Route path="pedidos" element={<AdminOrdersPlaceholderPage />} />
+          <Route path="config" element={<AdminSettingsPage />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AppProvider>
   );
 }

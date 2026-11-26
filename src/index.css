@@ -1,5 +1,32 @@
-:root {
-  color-scheme: light;
+@import 'tailwindcss';
+
+/*
+ * Neutral design tokens prepared for effortless re-theming in Block 6
+ * once Grama Joyería defines its final visual brand identity.
+ */
+@theme {
+  --color-surface: #fafaf9;
+  --color-card: #ffffff;
+  --color-ink: #1c1917;
+  --color-muted: #57534e;
+  --color-line: #e7e5e4;
+  --color-brand: #1f2937;
+  --color-brand-ink: #ffffff;
+  --color-accent: #b45309;
+  --color-accent-soft: #fef3c7;
+  --color-ok: #15803d;
+  --color-ok-soft: #dcfce7;
+  --color-warn: #b45309;
+  --color-warn-soft: #fef3c7;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fee2e2;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
   font-family:
     system-ui,
     -apple-system,
@@ -7,62 +34,5 @@
     'Segoe UI',
     Roboto,
     sans-serif;
-  line-height: 1.5;
-  color: #1f2937;
-  background-color: #fafaf9;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-height: 100dvh;
-}
-
-.app-shell {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 1.5rem;
-}
-
-.status-card {
-  width: 100%;
-  max-width: 34rem;
-  padding: 1.75rem;
-  border-radius: 1rem;
-  background-color: #ffffff;
-  border: 1px solid #e7e5e4;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.status-card h1 {
-  margin: 0.75rem 0 0.5rem;
-  font-size: 1.6rem;
-  line-height: 1.25;
-}
-
-.status-card p {
-  margin: 0 0 1rem;
-  color: #4b5563;
-}
-
-.status-list {
-  margin: 0;
-  padding-left: 1.2rem;
-  color: #374151;
-  display: grid;
-  gap: 0.4rem;
+  -webkit-font-smoothing: antialiased;
 }
