@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage';
 import { AdminOrdersPlaceholderPage } from '../features/admin/pages/AdminOrdersPlaceholderPage';
 import { AdminSettingsPage } from '../features/admin/pages/AdminSettingsPage';
-import { AdminStockPlaceholderPage } from '../features/admin/pages/AdminStockPlaceholderPage';
+import { AdminStockPage } from '../features/admin/pages/AdminStockPage';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { CatalogHomePage } from '../features/catalog/pages/CatalogHomePage';
 import { CheckoutPlaceholderPage } from '../features/catalog/pages/CheckoutPlaceholderPage';
@@ -28,7 +28,7 @@ export function App() {
 
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
-          <Route path="stock" element={<AdminStockPlaceholderPage />} />
+          <Route path="stock" element={<AdminStockPage />} />
           <Route path="pedidos" element={<AdminOrdersPlaceholderPage />} />
           <Route path="config" element={<AdminSettingsPage />} />
         </Route>

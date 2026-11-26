@@ -1,12 +1,23 @@
+import { compressProductImage } from '../features/inventory/lib/imageCompression';
+import { slugifyText } from '../features/inventory/lib/inventoryUtils';
 import type {
+  ActivityLog,
   AuthSession,
+  Category,
   PartnerProfile,
   PartnerRole,
+  Product,
+  ProductImage,
   ShippingMethodInfo,
   StoreSettings,
 } from '../shared/types/domain';
 import { supabase } from './supabaseClient';
-import type { PartnerUpdateInput, PublicCatalogMeta, StoreRepository } from './storeRepository';
+import type {
+  PartnerUpdateInput,
+  ProductSaveInput,
+  PublicCatalogMeta,
+  StoreRepository,
+} from './storeRepository';
 
 interface ProfileRow {
   id: string;
@@ -32,6 +43,57 @@ interface StoreSettingsRow {
   wholesale_enabled: boolean;
   wholesale_min_order_cents: number;
 }
+
+interface CategoryRow {
+  id: string;
+  name: string;
+  slug: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+interface ProductImageRow {
+  id: string;
+  product_id: string;
+  storage_path: string;
+  public_url: string;
+  sort_order: number;
+}
+
+interface ProductRow {
+  id: string;
+  sku: string | null;
+  name: string;
+  slug: string;
+  description: string;
+  material_details: string;
+  category_id: string | null;
+  cost_cents: number;
+  retail_price_cents: number;
+  wholesale_price_cents: number | null;
+  wholesale_min_qty: number | null;
+  stock_qty: number;
+  min_stock_qty: number;
+  is_active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  product_images?: ProductImageRow[];
+}
+
+interface ActivityLogRow {
+  id: string;
+  actor_id: string | null;
+  actor_name: string;
+  action_type: string;
+  summary: string;
+  entity_type: string;
+  entity_id: string | null;
+  created_at: string;
+}
+
+const PRODUCT_IMAGES_BUCKET = 'product-images';
 
 function getClient() {
   if (!supabase) {
@@ -61,6 +123,85 @@ function mapSettingsRow(row: StoreSettingsRow): StoreSettings {
     wholesaleEnabled: row.wholesale_enabled,
     wholesaleMinOrderCents: row.wholesale_min_order_cents,
   };
+}
+
+function mapCategoryRow(row: CategoryRow): Category {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    sortOrder: row.sort_order,
+    isActive: row.is_active,
+  };
+}
+
+function mapImageRow(row: ProductImageRow): ProductImage {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    storagePath: row.storage_path,
+    publicUrl: row.public_url,
+    sortOrder: row.sort_order,
+  };
+}
+
+function mapProductRow(row: ProductRow): Product {
+  const images = (row.product_images ?? [])
+    .map(mapImageRow)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return {
+    id: row.id,
+    sku: row.sku,
+    name: row.name,
+    slug: row.slug,
+    description: row.description,
+    materialDetails: row.material_details,
+    categoryId: row.category_id,
+    costCents: row.cost_cents,
+    retailPriceCents: row.retail_price_cents,
+    wholesalePriceCents: row.wholesale_price_cents,
+    wholesaleMinQty: row.wholesale_min_qty,
+    stockQty: row.stock_qty,
+    minStockQty: row.min_stock_qty,
+    isActive: row.is_active,
+    images,
+    createdBy: row.created_by,
+    updatedBy: row.updated_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapActivityRow(row: ActivityLogRow): ActivityLog {
+  return {
+    id: row.id,
+    actorId: row.actor_id,
+    actorName: row.actor_name,
+    actionType: row.action_type,
+    summary: row.summary,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    createdAt: row.created_at,
+  };
+}
+
+async function logSupabaseActivity(
+  session: AuthSession | null,
+  actionType: string,
+  summary: string,
+  entityType: string,
+  entityId: string | null,
+): Promise<void> {
+  const client = getClient();
+  await client.from('activity_logs').insert({
+    actor_id: session?.partner.id ?? null,
+    actor_name: session?.partner.fullName ?? 'Socio',
+    action_type: actionType,
+    summary,
+    entity_type: entityType,
+    entity_id: entityId,
+  });
 }
 
 /**
@@ -203,5 +344,217 @@ export const supabaseRepository: StoreRepository = {
       .single<StoreSettingsRow>();
     if (error) throw error;
     return mapSettingsRow(data);
+  },
+
+  async getCategories(): Promise<Category[]> {
+    const client = getClient();
+    const { data, error } = await client
+      .from('categories')
+      .select('id, name, slug, sort_order, is_active')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return ((data ?? []) as CategoryRow[]).map(mapCategoryRow);
+  },
+
+  async createCategory(name: string): Promise<Category> {
+    const cleanName = name.trim();
+    if (!cleanName) throw new Error('Ingresá un nombre para la categoría.');
+
+    const client = getClient();
+    const slug = `${slugifyText(cleanName)}-${Date.now().toString(36).slice(-4)}`;
+    const { data, error } = await client
+      .from('categories')
+      .insert({ name: cleanName, slug, sort_order: 99, is_active: true })
+      .select('id, name, slug, sort_order, is_active')
+      .single<CategoryRow>();
+    if (error) throw error;
+    return mapCategoryRow(data);
+  },
+
+  async getAdminProducts(): Promise<Product[]> {
+    const client = getClient();
+    const { data, error } = await client
+      .from('products')
+      .select('*, product_images(id, product_id, storage_path, public_url, sort_order)')
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return ((data ?? []) as ProductRow[]).map(mapProductRow);
+  },
+
+  async saveProduct(input: ProductSaveInput, existingId?: string): Promise<Product> {
+    const client = getClient();
+    const session = await this.getSession();
+
+    const basePayload = {
+      sku: input.sku,
+      name: input.name,
+      description: input.description,
+      material_details: input.materialDetails,
+      category_id: input.categoryId,
+      cost_cents: input.costCents,
+      retail_price_cents: input.retailPriceCents,
+      wholesale_price_cents: input.wholesalePriceCents,
+      wholesale_min_qty: input.wholesaleMinQty,
+      stock_qty: input.stockQty,
+      min_stock_qty: input.minStockQty,
+      is_active: input.isActive,
+      updated_by: session?.partner.id ?? null,
+    };
+
+    if (existingId) {
+      const { data, error } = await client
+        .from('products')
+        .update(basePayload)
+        .eq('id', existingId)
+        .select('*, product_images(id, product_id, storage_path, public_url, sort_order)')
+        .single<ProductRow>();
+      if (error) throw error;
+      const mapped = mapProductRow(data);
+      await logSupabaseActivity(
+        session,
+        'product_updated',
+        `Actualizó ${mapped.name} (stock: ${mapped.stockQty})`,
+        'product',
+        mapped.id,
+      );
+      return mapped;
+    }
+
+    const slug = `${slugifyText(input.name)}-${Date.now().toString(36).slice(-4)}`;
+    const { data, error } = await client
+      .from('products')
+      .insert({
+        ...basePayload,
+        slug,
+        created_by: session?.partner.id ?? null,
+      })
+      .select('*, product_images(id, product_id, storage_path, public_url, sort_order)')
+      .single<ProductRow>();
+    if (error) throw error;
+    const mapped = mapProductRow(data);
+    await logSupabaseActivity(
+      session,
+      'product_created',
+      `Cargó ${mapped.name} (stock inicial: ${mapped.stockQty})`,
+      'product',
+      mapped.id,
+    );
+    return mapped;
+  },
+
+  async adjustProductStock(productId: string, delta: number, reason?: string): Promise<Product> {
+    const client = getClient();
+    const session = await this.getSession();
+
+    const { data: current, error: fetchError } = await client
+      .from('products')
+      .select('id, name, stock_qty')
+      .eq('id', productId)
+      .single<{ id: string; name: string; stock_qty: number }>();
+    if (fetchError) throw fetchError;
+
+    const nextStock = Math.max(0, current.stock_qty + delta);
+    const { data, error } = await client
+      .from('products')
+      .update({
+        stock_qty: nextStock,
+        updated_by: session?.partner.id ?? null,
+      })
+      .eq('id', productId)
+      .select('*, product_images(id, product_id, storage_path, public_url, sort_order)')
+      .single<ProductRow>();
+    if (error) throw error;
+
+    const diffLabel = delta >= 0 ? `+${delta}` : String(delta);
+    await logSupabaseActivity(
+      session,
+      'stock_adjusted',
+      `${reason ? `${reason}: ` : ''}${current.name} (${diffLabel} → ${nextStock} u.)`,
+      'product',
+      productId,
+    );
+
+    return mapProductRow(data);
+  },
+
+  async deleteProduct(productId: string): Promise<void> {
+    const client = getClient();
+    const session = await this.getSession();
+
+    const { data: target } = await client
+      .from('products')
+      .select('name, product_images(storage_path)')
+      .eq('id', productId)
+      .single<{ name: string; product_images?: Array<{ storage_path: string }> }>();
+
+    const paths = (target?.product_images ?? []).map((img) => img.storage_path).filter(Boolean);
+    if (paths.length > 0) {
+      await client.storage.from(PRODUCT_IMAGES_BUCKET).remove(paths);
+    }
+
+    const { error } = await client.from('products').delete().eq('id', productId);
+    if (error) throw error;
+
+    if (target?.name) {
+      await logSupabaseActivity(
+        session,
+        'product_deleted',
+        `Eliminó ${target.name} del inventario`,
+        'product',
+        productId,
+      );
+    }
+  },
+
+  async uploadProductImage(productId: string, file: File): Promise<ProductImage> {
+    const client = getClient();
+    const compressed = await compressProductImage(file);
+    const storagePath = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${compressed.extension}`;
+
+    const { error: uploadError } = await client.storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .upload(storagePath, compressed.blob, {
+        contentType: compressed.extension === 'webp' ? 'image/webp' : 'image/jpeg',
+        upsert: false,
+      });
+    if (uploadError) throw uploadError;
+
+    const {
+      data: { publicUrl },
+    } = client.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(storagePath);
+
+    const { data, error } = await client
+      .from('product_images')
+      .insert({
+        product_id: productId,
+        storage_path: storagePath,
+        public_url: publicUrl,
+        sort_order: 0,
+      })
+      .select('id, product_id, storage_path, public_url, sort_order')
+      .single<ProductImageRow>();
+    if (error) throw error;
+
+    return mapImageRow(data);
+  },
+
+  async deleteProductImage(image: ProductImage): Promise<void> {
+    const client = getClient();
+    if (image.storagePath) {
+      await client.storage.from(PRODUCT_IMAGES_BUCKET).remove([image.storagePath]);
+    }
+    const { error } = await client.from('product_images').delete().eq('id', image.id);
+    if (error) throw error;
+  },
+
+  async getRecentActivity(limit = 12): Promise<ActivityLog[]> {
+    const client = getClient();
+    const { data, error } = await client
+      .from('activity_logs')
+      .select('id, actor_id, actor_name, action_type, summary, entity_type, entity_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return ((data ?? []) as ActivityLogRow[]).map(mapActivityRow);
   },
 };
