@@ -1,6 +1,7 @@
 import { Gem, Lock, ShoppingBag, Truck } from 'lucide-react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useApp } from '../providers/useApp';
+import { useCart } from '../providers/useCart';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Catálogo', icon: Gem },
@@ -15,16 +16,17 @@ function desktopNavClass({ isActive }: { isActive: boolean }): string {
 }
 
 function mobileNavClass({ isActive }: { isActive: boolean }): string {
-  return `flex flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium transition ${
+  return `relative flex flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium transition ${
     isActive ? 'text-ink font-semibold' : 'text-muted'
   }`;
 }
 
 /**
- * Mobile-first public storefront layout with responsive desktop top bar and mobile bottom navigation.
+ * Mobile-first public storefront layout with live cart counter badge on desktop and mobile nav.
  */
 export function PublicLayout() {
   const { publicMeta, activeSeller } = useApp();
+  const { itemCount } = useCart();
 
   return (
     <div className="min-h-dvh flex flex-col bg-surface text-ink">
@@ -40,8 +42,7 @@ export function PublicLayout() {
               </div>
               {activeSeller ? (
                 <div className="truncate text-xs text-muted">
-                  Atención personalizada:{' '}
-                  <span className="font-medium">{activeSeller.fullName}</span>
+                  Atención: <span className="font-medium">{activeSeller.fullName}</span>
                 </div>
               ) : null}
             </div>
@@ -50,6 +51,7 @@ export function PublicLayout() {
           <nav className="hidden md:flex items-center gap-1" aria-label="Navegación principal">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
+              const isCartTab = item.to === '/pedido';
               return (
                 <NavLink
                   key={item.to}
@@ -58,7 +60,12 @@ export function PublicLayout() {
                   className={desktopNavClass}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
-                  {item.label}
+                  <span>{item.label}</span>
+                  {isCartTab && itemCount > 0 ? (
+                    <span className="rounded-full bg-accent px-1.5 py-0.5 text-xs font-bold leading-none text-brand-ink">
+                      {itemCount}
+                    </span>
+                  ) : null}
                 </NavLink>
               );
             })}
@@ -84,10 +91,16 @@ export function PublicLayout() {
       >
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
+          const isCartTab = item.to === '/pedido';
           return (
             <NavLink key={item.to} to={item.to} end={item.to === '/'} className={mobileNavClass}>
               <Icon className="h-5 w-5" aria-hidden="true" />
               <span>{item.label}</span>
+              {isCartTab && itemCount > 0 ? (
+                <span className="absolute top-1 right-6 rounded-full bg-brand px-1.5 py-0.5 text-xs font-bold leading-none text-brand-ink">
+                  {itemCount}
+                </span>
+              ) : null}
             </NavLink>
           );
         })}

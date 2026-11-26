@@ -5,11 +5,12 @@ import { AdminSettingsPage } from '../features/admin/pages/AdminSettingsPage';
 import { AdminStockPage } from '../features/admin/pages/AdminStockPage';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { CatalogHomePage } from '../features/catalog/pages/CatalogHomePage';
-import { CheckoutPlaceholderPage } from '../features/catalog/pages/CheckoutPlaceholderPage';
+import { CheckoutPage } from '../features/catalog/pages/CheckoutPage';
 import { ShippingContactPage } from '../features/catalog/pages/ShippingContactPage';
 import { AdminLayout } from './layouts/AdminLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AppProvider } from './providers/AppProvider';
+import { CartProvider } from './providers/CartProvider';
 
 /**
  * Root application router separating the public catalog storefront from the partner admin area.
@@ -17,24 +18,26 @@ import { AppProvider } from './providers/AppProvider';
 export function App() {
   return (
     <AppProvider>
-      <Routes>
-        <Route element={<PublicLayout />}>
-          <Route index element={<CatalogHomePage />} />
-          <Route path="envios" element={<ShippingContactPage />} />
-          <Route path="pedido" element={<CheckoutPlaceholderPage />} />
-        </Route>
+      <CartProvider>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route index element={<CatalogHomePage />} />
+            <Route path="envios" element={<ShippingContactPage />} />
+            <Route path="pedido" element={<CheckoutPage />} />
+          </Route>
 
-        <Route path="login" element={<LoginPage />} />
+          <Route path="login" element={<LoginPage />} />
 
-        <Route path="admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboardPage />} />
-          <Route path="stock" element={<AdminStockPage />} />
-          <Route path="pedidos" element={<AdminOrdersPlaceholderPage />} />
-          <Route path="config" element={<AdminSettingsPage />} />
-        </Route>
+          <Route path="admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="stock" element={<AdminStockPage />} />
+            <Route path="pedidos" element={<AdminOrdersPlaceholderPage />} />
+            <Route path="config" element={<AdminSettingsPage />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </CartProvider>
     </AppProvider>
   );
 }
